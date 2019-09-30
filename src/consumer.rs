@@ -13,6 +13,7 @@ use rdkafka::consumer::Consumer;
 use rdkafka::message::Message;
 use rdkafka::topic_partition_list::Offset;
 use rdkafka::TopicPartitionList;
+use regex::Regex;
 use schema_registry_converter::Decoder;
 use serde_json::Value as JsonValue;
 use tokio::runtime::current_thread;
@@ -58,6 +59,8 @@ pub fn run_consumer(
     let mut offsets = HashMap::new();
     let mut current_offsets = HashMap::new();
 
+    let re: Regex = Regex::new(r"Partition EOF: (\d)+$").unwrap();
+
     t.partitions().iter().for_each(|p| {
         let (low, high) = consumer
             .fetch_watermarks(&topic, p.id(), Duration::from_secs(5))
@@ -78,7 +81,11 @@ pub fn run_consumer(
                 *current += 1;
                 Some(msg)
             }
-            Err(_) => {
+            Err(e) => {
+                let pid: i32 = re.captures(e.to_string().as_str()).unwrap().get(1)?.as_str().parse().unwrap();
+                let offset = current_offsets.get(&pid).unwrap();
+                eprintln!("reached end of partition [{}] at offset {}", pid, offset);
+
                 if offsets.iter().all(|(k, v)| {
                     let current = current_offsets.get(k).unwrap_or(&i64::max_value());
                     current == &v.high
