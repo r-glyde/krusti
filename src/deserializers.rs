@@ -4,6 +4,7 @@ use serde_json::Value as JsonValue;
 
 use crate::utils;
 
+// TODO: better error handling for these
 pub fn avro_deserializer(
     bytes: Option<Vec<u8>>,
     registry_decoder: &mut schema_registry_converter::Decoder,

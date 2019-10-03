@@ -2,8 +2,8 @@ extern crate futures;
 extern crate rdkafka;
 extern crate tokio;
 
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use std::i64;
 use std::time::Duration;
 
 use futures::stream::Stream;
@@ -19,6 +19,7 @@ use serde_json::Value as JsonValue;
 use tokio::runtime::current_thread;
 use uuid::Uuid;
 
+use self::rdkafka::metadata::MetadataPartition;
 use crate::config::Deserializer;
 use crate::deserializers::{avro_deserializer, string_deserializer};
 use crate::kafka;
@@ -55,20 +56,11 @@ pub fn run_consumer(
         .unwrap();
     let t = m.topics().iter().find(|&t| t.name() == topic).unwrap();
 
-    let mut beginning_tm = HashMap::new();
-    let mut offsets = HashMap::new();
-    let mut current_offsets = HashMap::new();
-
     let re: Regex = Regex::new(r"Partition EOF: (\d)+$").unwrap();
 
-    t.partitions().iter().for_each(|p| {
-        let (low, high) = consumer
-            .fetch_watermarks(&topic, p.id(), Duration::from_secs(5))
-            .unwrap();
+    let (beginning_tm, offsets, mut completed_partitions) =
+        partition_maps(&topic, t.partitions(), &consumer);
 
-        beginning_tm.insert((topic.to_owned(), p.id()), Offset::Beginning);
-        offsets.insert(p.id(), kafka::Offsets { low, high });
-    });
     consumer
         .assign(&TopicPartitionList::from_topic_map(&beginning_tm))
         .expect("Can't subscribe to specified partitions");
@@ -76,21 +68,23 @@ pub fn run_consumer(
     let stream = consumer
         .start()
         .filter_map(|result| match result {
-            Ok(msg) => {
-                let current = current_offsets.entry(msg.partition()).or_insert(0);
-                *current += 1;
-                Some(msg)
-            }
+            Ok(msg) => Some(msg),
             Err(e) => {
-                let pid: i32 = re.captures(e.to_string().as_str()).unwrap().get(1)?.as_str().parse().unwrap();
-                let offset = current_offsets.get(&pid).unwrap();
-                eprintln!("reached end of partition [{}] at offset {}", pid, offset);
+                match re.captures(e.to_string().as_str()) {
+                    Some(cs) => {
+                        let pid: i32 = cs.get(1).unwrap().as_str().parse().unwrap();
+                        let offset = offsets.get(&pid).unwrap();
+                        completed_partitions.insert(pid, true).unwrap();
+                        eprintln!(
+                            "reached end of partition [{}] at offset {}",
+                            pid, offset.high
+                        );
 
-                if offsets.iter().all(|(k, v)| {
-                    let current = current_offsets.get(k).unwrap_or(&i64::max_value());
-                    current == &v.high
-                }) {
-                    consumer.stop();
+                        if completed_partitions.values().all(|&done| done == true) {
+                            consumer.stop();
+                        }
+                    }
+                    None => eprintln!("{}", e.to_string()),
                 }
                 None
             }
@@ -106,4 +100,30 @@ pub fn run_consumer(
 
     let mut io_thread = current_thread::Runtime::new().unwrap();
     let _ = io_thread.block_on(stream);
+}
+
+fn partition_maps(
+    topic: &str,
+    partitions: &[MetadataPartition],
+    consumer: &StreamConsumer,
+) -> (
+    HashMap<(String, i32), Offset, RandomState>,
+    HashMap<i32, kafka::Offsets, RandomState>,
+    HashMap<i32, bool, RandomState>,
+) {
+    let mut beginning_tm = HashMap::new();
+    let mut offsets = HashMap::new();
+    let mut completed_partitions = HashMap::new();
+
+    partitions.iter().for_each(|p| {
+        let (low, high) = consumer
+            .fetch_watermarks(&topic, p.id(), Duration::from_secs(5))
+            .unwrap();
+
+        beginning_tm.insert((topic.to_owned(), p.id()), Offset::Beginning);
+        offsets.insert(p.id(), kafka::Offsets { low, high });
+        completed_partitions.insert(p.id(), false);
+    });
+
+    (beginning_tm, offsets, completed_partitions)
 }

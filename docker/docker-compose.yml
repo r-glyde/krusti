@@ -1,13 +1,11 @@
 version: '3.3'
 services:
-
   zookeeper:
     image: confluentinc/cp-zookeeper:4.0.0
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: '2181'
-
   kafka:
     image: confluentinc/cp-kafka:4.0.0
     ports:
@@ -19,7 +17,6 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1'
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,OUTSIDE://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
-
   schema-registry:
     image: confluentinc/cp-schema-registry:4.0.0
     hostname: schema-registry
