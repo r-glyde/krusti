@@ -15,7 +15,7 @@ fn main() {
     } = Config::from_args();
 
     match mode {
-        Mode::Consumer => consumer::run_consumer(
+        Mode::Consumer => consumer::run(
             brokers,
             topic,
             key_deserializer,
