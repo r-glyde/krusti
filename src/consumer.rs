@@ -38,17 +38,17 @@ pub fn run_consumer(
         .create()
         .expect("Consumer creation failed");
 
-    let key_registry = &mut Decoder::new(registry_url.to_owned());
-    let value_registry = &mut Decoder::new(registry_url.to_owned());
+    let key_decoder = &mut Decoder::new(registry_url.to_owned());
+    let value_decoder = &mut Decoder::new(registry_url.to_owned());
 
     let mut key_d: Box<dyn FnMut(Option<Vec<u8>>) -> JsonValue> = match key_deserializer {
         Deserializer::String => Box::new(|bytes| string_deserializer(bytes)),
-        Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, key_registry)),
+        Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, key_decoder)),
     };
 
     let mut value_d: Box<dyn FnMut(Option<Vec<u8>>) -> JsonValue> = match value_deserializer {
         Deserializer::String => Box::new(|bytes| string_deserializer(bytes)),
-        Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, value_registry)),
+        Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, value_decoder)),
     };
 
     let m = consumer
@@ -56,7 +56,7 @@ pub fn run_consumer(
         .unwrap();
     let t = m.topics().iter().find(|&t| t.name() == topic).unwrap();
 
-    let re: Regex = Regex::new(r"Partition EOF: (\d)+$").unwrap();
+    let re: Regex = Regex::new(r"Partition EOF: (\d+)$").unwrap();
 
     let (beginning_tm, offsets, mut completed_partitions) =
         partition_maps(&topic, t.partitions(), &consumer);
