@@ -53,11 +53,9 @@ pub fn run(
         consumer.poll().iter().for_each(|mss| {
             mss.iter().for_each(|ms| {
                 ms.messages().iter().for_each(|msg| {
-                    let key = key_d(Some(msg.key.to_vec()));
-                    let value = value_d(Some(msg.value.to_vec()));
                     let record = Record {
-                        key,
-                        value,
+                        key: key_d(Some(msg.key.to_vec())),
+                        value: value_d(Some(msg.value.to_vec())),
                         topic: ms.topic().to_owned(),
                         partition: ms.partition(),
                         offset: msg.offset,
