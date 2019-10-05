@@ -21,7 +21,10 @@ pub fn string_deserializer(bytes: Option<Vec<u8>>) -> JsonValue {
     bytes.map_or_else(
         || JsonValue::Null,
         |bs| match str::from_utf8(bs.as_slice()) {
-            Ok(v) => serde_json::from_str(&v).unwrap(),
+            Ok(v) => match serde_json::from_str(&v) {
+                Ok(json) => json,
+                Err(_) => JsonValue::String(v.to_owned())
+            }
             Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
         },
     )
