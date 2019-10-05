@@ -15,13 +15,14 @@ fn main() {
     } = Config::from_args();
 
     match mode {
-        Mode::Consumer => consumer::run(
+        Mode::Consume => consumer::run(
             brokers,
             topic,
             key_deserializer,
             value_deserializer,
             registry_url,
         ),
-        Mode::Producer => println!("producing not supported yet..."),
+        Mode::Produce => println!("producing not supported yet..."),
+        Mode::Describe => println!("describing not supported yet..."),
     }
 }
