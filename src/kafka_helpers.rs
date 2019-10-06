@@ -9,7 +9,7 @@ pub struct Offsets {
     pub high: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Record {
     pub key: JsonValue,
     pub value: JsonValue,

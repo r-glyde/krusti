@@ -27,12 +27,12 @@ pub fn run(
     let value_decoder = &mut Decoder::new(registry_url.to_owned());
 
     let mut key_d: Box<dyn FnMut(Option<Vec<u8>>) -> JsonValue> = match key_deserializer {
-        Deserializer::String => Box::new(|bytes| string_deserializer(bytes)),
+        Deserializer::String => Box::new(string_deserializer),
         Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, key_decoder)),
     };
 
     let mut value_d: Box<dyn FnMut(Option<Vec<u8>>) -> JsonValue> = match value_deserializer {
-        Deserializer::String => Box::new(|bytes| string_deserializer(bytes)),
+        Deserializer::String => Box::new(string_deserializer),
         Deserializer::Avro => Box::new(|bytes| avro_deserializer(bytes, value_decoder)),
     };
 
@@ -52,28 +52,32 @@ pub fn run(
     loop {
         consumer.poll().iter().for_each(|mss| {
             mss.iter().for_each(|ms| {
-                ms.messages().iter().for_each(|msg| {
-                    let record = Record {
-                        key: key_d(Some(msg.key.to_vec())),
-                        value: value_d(Some(msg.value.to_vec())),
-                        topic: ms.topic().to_owned(),
-                        partition: ms.partition(),
-                        offset: msg.offset,
-                        timestamp: -1,
-                    };
-                    println!("{}", serde_json::to_string(&record).unwrap());
-
-                    if (record.offset + 1) == *end_offsets.get(&record.partition).unwrap() {
-                        eprintln!(
-                            "reached end of partition [{}] at offset {}",
-                            record.partition, record.offset
-                        );
-                        completed_partitions.insert(record.partition, true);
-                    }
-                })
-            })
+                let records: Vec<String> = ms
+                    .messages()
+                    .iter()
+                    .map(|msg| {
+                        if (msg.offset + 1) == *end_offsets.get(&ms.partition()).unwrap() {
+                            eprintln!("reached end of partition [{}] at offset {}",
+                                      ms.partition(), msg.offset);
+                            completed_partitions.insert(ms.partition(), true);
+                        }
+                        let record = Record {
+                            key: key_d(Some(msg.key.to_vec())),
+                            //                        key: JsonValue::String("abc".to_owned()),
+                            value: value_d(Some(msg.value.to_vec())),
+                            //                        value: JsonValue::String("abc".to_owned()),
+                            topic: ms.topic().to_owned(),
+                            partition: ms.partition(),
+                            offset: msg.offset,
+                            timestamp: -1,
+                        };
+                        serde_json::to_string(&record).unwrap()
+                    })
+                    .collect();
+                println!("{}", records.join("\n"));
+            });
         });
-        if completed_partitions.values().all(|&done| done == true) {
+        if completed_partitions.values().all(|&done| done) {
             break;
         }
     }
