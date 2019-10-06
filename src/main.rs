@@ -1,7 +1,7 @@
 extern crate krusti;
 
 use krusti::config::{Config, Mode};
-use krusti::consumer;
+use krusti::{consumer, describe};
 use structopt::StructOpt;
 
 fn main() {
@@ -22,7 +22,7 @@ fn main() {
             value_deserializer,
             registry_url,
         ),
+        Mode::Describe => describe::run(brokers, topic),
         Mode::Produce => println!("producing not supported yet..."),
-        Mode::Describe => println!("describing not supported yet..."),
     }
 }
