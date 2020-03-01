@@ -26,9 +26,8 @@ pub struct Config {
 arg_enum! {
     #[derive(Debug)]
     pub enum Mode {
-        Consume,
-        Produce,
-        Describe,
+        Consumer,
+        Producer,
     }
 }
 
