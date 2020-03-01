@@ -1,10 +1,11 @@
 extern crate krusti;
 
 use krusti::config::{Config, Mode};
-use krusti::{consumer, describe};
+use krusti::consumer;
 use structopt::StructOpt;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let Config {
         mode,
         brokers,
@@ -15,14 +16,13 @@ fn main() {
     } = Config::from_args();
 
     match mode {
-        Mode::Consume => consumer::run(
+        Mode::Consumer => consumer::run_consumer(
             brokers,
             topic,
             key_deserializer,
             value_deserializer,
             registry_url,
-        ),
-        Mode::Describe => describe::run(brokers, topic),
-        Mode::Produce => println!("producing not supported yet..."),
+        ).await,
+        Mode::Producer => eprintln!("producing not supported yet..."),
     }
 }
