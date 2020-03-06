@@ -2,17 +2,18 @@ use std::str;
 
 use serde_json::Value as JsonValue;
 
+use crate::schema_registry;
 use crate::utils;
 
 // TODO: better error handling for these
 pub fn avro_deserializer(
     bytes: Option<Vec<u8>>,
-    registry_decoder: &mut schema_registry_converter::Decoder,
+    registry_decoder: &mut schema_registry::Decoder,
 ) -> JsonValue {
     utils::json_from_avro(
         registry_decoder
             .decode(bytes.as_ref().map(|bs| bs.as_slice()))
-            .unwrap(),
+            .unwrap()
     )
     .unwrap()
 }

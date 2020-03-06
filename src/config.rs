@@ -4,8 +4,6 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "krusti")]
 pub struct Config {
-    #[structopt(short, long, possible_values = &Mode::variants(), case_insensitive = true)]
-    pub mode: Mode,
 
     #[structopt(short, long)]
     pub brokers: String,
@@ -21,14 +19,7 @@ pub struct Config {
 
     #[structopt(short, long, default_value = "localhost:8081")]
     pub registry_url: String,
-}
 
-arg_enum! {
-    #[derive(Debug)]
-    pub enum Mode {
-        Consumer,
-        Producer,
-    }
 }
 
 arg_enum! {

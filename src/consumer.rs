@@ -14,7 +14,6 @@ use rdkafka::message::Message;
 use rdkafka::topic_partition_list::Offset;
 use rdkafka::TopicPartitionList;
 use regex::Regex;
-use schema_registry_converter::Decoder;
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -22,6 +21,7 @@ use self::rdkafka::metadata::MetadataPartition;
 use crate::config::Deserializer;
 use crate::deserializers::{avro_deserializer, string_deserializer};
 use crate::kafka;
+use crate::schema_registry::Decoder;
 
 pub async fn run_consumer(
     brokers: String,
