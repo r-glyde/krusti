@@ -66,34 +66,34 @@ pub async fn run_consumer(
         .expect("Can't subscribe to specified partitions");
 
     consumer.start().for_each(|res| match res {
-            Ok(msg) => {
-                let key = key_d(msg.key().map(|bytes| bytes.to_vec()));
-                let value = value_d(msg.payload().map(|bytes| bytes.to_vec()));
-                let record = kafka::Record::new(msg, key, value);
+        Ok(msg) => {
+            let key = key_d(msg.key().map(|bytes| bytes.to_vec()));
+            let value = value_d(msg.payload().map(|bytes| bytes.to_vec()));
+            let record = kafka::Record::new(msg, key, value);
 
-                println!("{}", serde_json::to_string(&record).unwrap());
-                future::ready(())
-            },
-            Err(e) => {
-                match re.captures(e.to_string().as_str()) {
-                    Some(cs) => {
-                        let pid: i32 = cs.get(1).unwrap().as_str().parse().unwrap();
-                        let offset = offsets.get(&pid).unwrap();
-                        completed_partitions.insert(pid, true).unwrap();
-                        eprintln!(
-                            "reached end of partition [{}] at offset {}",
-                            pid, offset.high
-                        );
+            println!("{}", serde_json::to_string(&record).unwrap());
+            future::ready(())
+        },
+        Err(e) => {
+            match re.captures(e.to_string().as_str()) {
+                Some(cs) => {
+                    let pid: i32 = cs.get(1).unwrap().as_str().parse().unwrap();
+                    let offset = offsets.get(&pid).unwrap();
+                    completed_partitions.insert(pid, true).unwrap();
+                    eprintln!(
+                        "reached end of partition [{}] at offset {}",
+                        pid, offset.high
+                    );
 
-                        if completed_partitions.values().all(|&done| done == true) {
-                            consumer.stop();
-                        }
+                    if completed_partitions.values().all(|&done| done) {
+                        consumer.stop();
                     }
-                    None => eprintln!("{}", e.to_string()),
                 }
-                future::ready(())
+                None => eprintln!("{}", e.to_string()),
             }
-        }).await;
+            future::ready(())
+        }
+    }).await;
 
 }
 
